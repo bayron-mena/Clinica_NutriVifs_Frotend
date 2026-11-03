@@ -18,7 +18,7 @@ export type Campos = typeof INICIAL;
 type Errores = Partial<Record<keyof Campos, string>>;
 
 // Mismas reglas que "Agendar consulta"; deja el error bajo cada campo.
-export function validarRegistro(datos: Campos, editarPerfil = false): Errores {
+export function validarRegistro(datos: Campos, editarPerfil = false, apellidoOpcional = false): Errores {
   const errores: Errores = {};
   const requeridos: (keyof Campos)[] = [
     "name",
@@ -61,6 +61,7 @@ export function validarRegistro(datos: Campos, editarPerfil = false): Errores {
     delete errores.confirmPassword;
     delete errores.aceptaTerminos;
   }
+  if (apellidoOpcional && !datos.apellido.trim()) delete errores.apellido;
   return errores;
 }
 

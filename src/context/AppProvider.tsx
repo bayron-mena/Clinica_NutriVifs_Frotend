@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { ADMIN_SEED_KEY, seedAdmin, sessionFromProfile } from "../data/defaultAdmin";
 import { EQUIPO_INICIAL, type MiembroEquipo } from "../data/equipo";
 import { PRODUCTOS, CATEGORIAS, imagenProducto } from "../data/productos";
 import { STORAGE_KEYS, loadList, loadObject, remove, save } from "../utils/storage";
@@ -18,7 +19,8 @@ function loadProducts(): ProductoCatalogo[] {
   });
 }
 function loadProfiles() {
-  return loadList<Profile>(STORAGE_KEYS.PROFILES).map(profile => ({ ...profile, role: ROLES.includes(profile.role as Role) ? profile.role : "Cliente" as Role }));
+  const profiles = loadList<Profile>(STORAGE_KEYS.PROFILES).map(profile => ({ ...profile, role: ROLES.includes(profile.role as Role) ? profile.role : "Cliente" as Role }));
+  return seedAdmin(profiles, loadObject<boolean>(ADMIN_SEED_KEY) === true);
 }
 function loadCart(): CartItem[] {
   const saved =
@@ -45,16 +47,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(() => {
     const stored = loadObject<Session>(STORAGE_KEYS.SESSION);
     const account = loadProfiles().find(p => p.email === stored?.email && !p.locked);
-    return account ? { ...account, role: stored?.role || account.role || "Cliente" } : null;
+    return account ? sessionFromProfile(account) : null;
   });
   const [cart, setCart] = useState<CartItem[]>(loadCart);
   const [team] = useState(() => (loadObject<MiembroEquipo[]>(STORAGE_KEYS.ADMIN_USERS) ?? EQUIPO_INICIAL).filter(user => user.status !== "Inactivo"));
   useEffect(() => { save(STORAGE_KEYS.CART, cart); }, [cart]);
   useEffect(() => { save(STORAGE_KEYS.ADMIN_PRODUCTS, products); }, [products]);
   useEffect(() => { save(CATEGORY_KEY, categories); }, [categories]);
+  useEffect(() => { if (loadObject<boolean>(ADMIN_SEED_KEY) !== true) { save(STORAGE_KEYS.PROFILES, profiles); save(ADMIN_SEED_KEY, true); } }, [profiles]);
+  useEffect(() => { if (session) save(STORAGE_KEYS.SESSION, session); }, [session]);
   const saveProfiles = (list: Profile[]) => { save(STORAGE_KEYS.PROFILES, list); setProfiles(list); };
-  const startSession = (profile: Profile, role = profile.role || "Cliente") => {
-    const next: Session = { name: profile.name, apellido: profile.apellido, email: profile.email, birthDate: profile.birthDate, phone: profile.phone, role };
+  const startSession = (profile: Profile) => {
+    const next = sessionFromProfile(profile);
     save(STORAGE_KEYS.SESSION, next); setSession(next);
   };
   const logout = () => { setSession(null); remove(STORAGE_KEYS.SESSION); };
@@ -63,7 +67,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     validateUser(next, profiles);
     saveProfiles([...profiles, next]); startSession(next);
   };
-  const authenticate = (email: string, password: string, role: Role) => {
+  const authenticate = (email: string, password: string): Role => {
     const profile = profiles.find(p => p.email === normalizeEmail(email));
     if (!profile) throw new Error("No existe una cuenta registrada con este correo.");
     if (profile.locked) throw new Error("Cuenta bloqueada por 3 intentos fallidos. Contacta a soporte.");
@@ -72,11 +76,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       saveProfiles(profiles.map(p => p === profile ? { ...p, failedAttempts, locked: failedAttempts >= 3 } : p));
       throw new Error(failedAttempts >= 3 ? "Cuenta bloqueada por 3 intentos fallidos." : "La contraseña no coincide con esta cuenta.");
     }
-    if (!ROLES.includes(role)) throw new Error("Selecciona un rol válido.");
     saveProfiles(profiles.map(p => p === profile ? { ...p, failedAttempts: 0 } : p));
-    // Modo demostración solicitado: el usuario elige el rol de esta sesión.
-    // En producción el servidor debe asignar y comprobar el rol de la cuenta.
-    startSession(profile, role);
+    startSession(profile);
+    return profile.role || "Cliente";
   };
   const manageUser = (profile: Profile, originalEmail?: string) => {
     requireRole(session?.role, ["Administrador"]);
@@ -97,12 +99,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       phone: details.phone === "+" ? "" : details.phone,
       region: details.region, comuna: details.comuna,
     };
-    const errors = validarRegistro({ ...INICIAL, ...next }, true);
+    const errors = validarRegistro({ ...INICIAL, ...next }, true, current.apellido === "");
     const error = Object.values(errors).find(Boolean);
     if (error) throw new Error(error);
     if (profiles.some(p => p !== current && normalizeEmail(p.email) === next.email)) throw new Error("Ese correo ya está registrado.");
     saveProfiles(profiles.map(p => p === current ? next : p));
-    startSession(next, session.role);
+    startSession(next);
   };
   const deleteUser = (email: string) => {
     requireRole(session?.role, ["Administrador"]);
@@ -119,7 +121,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
   const saveProduct = (product: ProductoCatalogo) => {
     requireRole(session?.role, ["Administrador", "Vendedor"]);
-    validateProduct(product, categories);
+    const exists = products.some(p => p.id === product.id);
+    validateProduct(product, categories, !exists);
     const next = { ...product, name: product.name.trim(), distributor: product.distributor?.trim() };
     commitProducts(products.some(p => p.id === product.id) ? products.map(p => p.id === product.id ? next : p) : [...products, next]);
   };
@@ -160,11 +163,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const addToCart = useCallback(
     (code: string) => {
       const product = products.find((item) => item.id === code);
-      if (!product) return false;
+      if (!product || product.stock <= 0) return false;
       if (getQuantity(code) >= product.stock) return false;
 
       setCart((current) => {
         const existing = current.find((item) => item.code === code);
+        if ((existing?.quantity || 0) >= product.stock) return current;
         if (existing) {
           return current.map((item) =>
             item.code === code ? { ...item, quantity: item.quantity + 1 } : item,
@@ -195,7 +199,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const stock = getStock(code);
         if (amount > 0 && item.quantity >= stock) return current;
 
-        const quantity = item.quantity + amount;
+        const quantity = Math.min(item.quantity + amount, stock);
         if (quantity <= 0) return current.filter((entry) => entry.code !== code);
         return current.map((entry) =>
           entry.code === code ? { ...entry, quantity } : entry,
@@ -211,6 +215,32 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const clearCart = useCallback(() => setCart([]), []);
 
-  const value: AppState = { products, categories, team, cart, cartQuantity: cart.reduce((n, p) => n + p.quantity, 0), cartTotal: cart.reduce((n, p) => n + p.price * p.quantity, 0), getQuantity, getStock, addToCart, changeQuantity, removeFromCart, clearCart, profiles, session, register, authenticate, updateProfile, manageUser, deleteUser, saveProduct, deleteProduct, updateStock, saveCategory, deleteCategory, logout };
+  const checkout = (expectedCart: CartItem[]) => {
+    const currentCart = loadObject<CartItem[]>(STORAGE_KEYS.CART) ?? [];
+    if (!currentCart.length) throw new Error("El carrito está vacío o la compra ya fue confirmada.");
+    if (JSON.stringify(currentCart) !== JSON.stringify(expectedCart)) {
+      throw new Error("El carrito cambió. Revisa los productos y vuelve a confirmar.");
+    }
+    const inventory = loadProducts();
+    // Validar toda la compra antes de descontar cualquier producto.
+    const quantities = new Map<string, number>();
+    for (const item of currentCart) {
+      if (!Number.isSafeInteger(item.quantity) || item.quantity <= 0) throw new Error("Cantidad inválida en el carrito.");
+      const product = inventory.find(p => p.id === item.code);
+      const quantity = (quantities.get(item.code) || 0) + item.quantity;
+      if (!product || !Number.isSafeInteger(product.stock) || product.stock < quantity) {
+        throw new Error("Stock insuficiente para " + item.name + ". Revisa tu carrito.");
+      }
+      if (product.price !== item.price) throw new Error("El precio cambió. Actualiza el carrito antes de confirmar.");
+      quantities.set(item.code, quantity);
+    }
+    const next = inventory.map(product => ({ ...product, stock: product.stock - (quantities.get(product.id) || 0) }));
+    save(STORAGE_KEYS.ADMIN_PRODUCTS, next);
+    save(STORAGE_KEYS.CART, []);
+    setProducts(next);
+    setCart([]);
+  };
+
+  const value: AppState = { products, categories, team, cart, cartQuantity: cart.reduce((n, p) => n + p.quantity, 0), cartTotal: cart.reduce((n, p) => n + p.price * p.quantity, 0), getQuantity, getStock, addToCart, changeQuantity, removeFromCart, clearCart, checkout, profiles, session, register, authenticate, updateProfile, manageUser, deleteUser, saveProduct, deleteProduct, updateStock, saveCategory, deleteCategory, logout };
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }

@@ -49,7 +49,7 @@ export function UserForm({ managed = false, editProfile = false, initial, onDone
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
 
-    const nuevosErrores = validarRegistro(datos, editProfile);
+    const nuevosErrores = validarRegistro(datos, editProfile, initial?.apellido === "");
     setErrores(nuevosErrores);
     if (Object.values(nuevosErrores).some(Boolean)) {
       setMessage("Revisa los campos marcados en rojo.");

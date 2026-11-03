@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router";
-import { useApp, type Role } from "../context/AppContext";
+import { useApp } from "../context/AppContext";
+import { routeForRole } from "../data/defaultAdmin";
 import { usePage } from "../hooks/usePage";
 import {
   MENSAJES,
@@ -14,7 +15,6 @@ import {
 export const Login = () => {
   usePage("Iniciar sesión | Clínica NutriDifs", "auth-page");
   const { authenticate } = useApp();
-  const [role, setRole] = useState<Role>("Cliente");
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -42,7 +42,10 @@ export const Login = () => {
       return;
     }
 
-    try { authenticate(correo, password, role); navigate("/"); }
+    try {
+      const role = authenticate(correo, password);
+      navigate(routeForRole(role), { replace: true });
+    }
     catch (error) { setMessage((error as Error).message); }
   };
 
@@ -57,7 +60,6 @@ export const Login = () => {
         Ingresa para continuar con tus solicitudes y reservas.
       </p>
       <form className="auth-form" onSubmit={handleSubmit}>
-        <div className="auth-field"><label htmlFor="login-role">Rol de la cuenta</label><select className="form-select" id="login-role" value={role} onChange={e => setRole(e.target.value as Role)}><option value="Administrador">ADMINISTRADOR</option><option value="Vendedor">VENDEDOR</option><option value="Cliente">USUARIO</option></select><small>Modo demostración: puedes elegir cualquier rol para esta sesión.</small></div>
         <div className="auth-field">
           <label htmlFor="email">Correo electrónico</label>
           <input className="form-control"

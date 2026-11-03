@@ -15,7 +15,7 @@ export function validateUser(
     ...profile,
     confirmPassword: profile.password,
     aceptaTerminos: true,
-  });
+  }, false, !!originalEmail && users.some(user => user.email === originalEmail && user.apellido === ""));
   const error = Object.values(errors).find(Boolean);
   if (error) throw new Error(error);
   if (!ROLES.includes(profile.role || "Cliente"))
@@ -42,6 +42,7 @@ export function validateStock(stock: number) {
 export function validateProduct(
   product: ProductoCatalogo,
   categories: string[],
+  creating = false,
 ) {
   for (const value of [product.name, product.distributor || ""]) {
     if (value.trim().length < 3 || !/^[\p{L}\p{N} ]+$/u.test(value.trim()))
@@ -54,6 +55,7 @@ export function validateProduct(
       "El precio debe tener al menos 3 dígitos, sin símbolos ni decimales.",
     );
   validateStock(product.stock);
+  if (creating && product.stock === 0) throw new Error("Un producto nuevo debe tener al menos 1 unidad de stock.");
   if (!categories.includes(product.category))
     throw new Error("Selecciona una categoría válida.");
 }

@@ -60,15 +60,15 @@ Los datos (carrito, cuentas, sesión, stock y equipo) se guardan en
 
 ## Roles y administración
 
-El registro público crea clientes. En esta etapa de demostración, cualquier cuenta registrada puede seleccionar ADMINISTRADOR, VENDEDOR o USUARIO al iniciar sesión; la selección se conserva durante la sesión y al recargar. USUARIO corresponde al rol Cliente.
+El registro público crea clientes. El inicio de sesión comprueba la cuenta y su contraseña y toma el rol guardado en el perfil; no permite elegirlo. Administrador entra a /administrar, vendedor a /vendedor y cliente a /. Al restaurar una sesión también se consulta el rol del perfil.
 
 - Administrador: Perfil → Administrar. Crear, consultar, modificar y eliminar usuarios, productos y categorías; asignar roles y desbloquear cuentas.
 - Vendedor: Perfil → Administrar. Consultar todo el catálogo compartido, agregar y modificar productos, y actualizar el stock. No puede crear clientes, eliminar productos ni gestionar categorías. No hay asignación de productos a vendedores en el modelo actual.
 - Cliente: navegación, carrito y funciones comerciales. Los tres roles pueden navegar y comprar.
 
-Los formularios de usuarios comparten las validaciones del registro existente. Productos: nombre y distribuidora de al menos tres caracteres alfanuméricos, sin símbolos; precio entero CLP de al menos tres dígitos; stock entero no negativo. Categorías: mínimo tres letras, espacios permitidos, conversión a mayúsculas y sin duplicados. Eliminar una categoría conserva sus productos sin categoría. La distribuidora no se presenta en el catálogo comercial.
+Los formularios de usuarios comparten las validaciones del registro existente. Productos: nombre y distribuidora de al menos tres caracteres alfanuméricos, sin símbolos; precio entero CLP de al menos tres dígitos; stock entero positivo al crear y no negativo al editar. Categorías: mínimo tres letras, espacios permitidos, conversión a mayúsculas y sin duplicados. Eliminar una categoría conserva sus productos sin categoría. La distribuidora no se presenta en el catálogo comercial.
 
-Los datos se guardan en localStorage del navegador. No hay backend: la selección libre de roles y las contraseñas locales son exclusivamente para demostración, no para producción. Un despliegue real requiere autenticación y autorización en servidor, contraseñas protegidas y roles asignados por un administrador, sin selección libre al ingresar.
+Los datos se guardan en localStorage del navegador. No hay backend: las contraseñas y la autorización locales son exclusivamente para demostración, no para producción. Un despliegue real requiere autenticación, autorización e inventario transaccional en servidor, además de contraseñas protegidas.
 
 Validación: `npm run build`, `npm run lint`, `npm run test:roles`. En entornos Windows restringidos que bloqueen la carga de configuración de Vite, se puede usar `node --experimental-strip-types node_modules/vite/bin/vite.js build --configLoader native` después de comprobar TypeScript.
 
@@ -79,7 +79,9 @@ Validación: `npm run build`, `npm run lint`, `npm run test:roles`. En entornos 
 flowchart TD
     Registro["Registro · /registro"] --> PublicForm["UserForm · registro público"]
     PublicForm --> Inicio["Inicio · /"]
-    Login["Login · /login · selector de rol"] --> Inicio
+    Login["Login · /login · credenciales"] -->|Cliente| Inicio
+    Login -->|Administrador| Administrar
+    Login -->|Vendedor| Vendedor
     Inicio --> Perfil["Perfil · /perfil"]
     Perfil -->|Administrador| Administrar["Administrar · /administrar"]
     Perfil -->|Vendedor| Vendedor["Vendedor · /vendedor"]
@@ -104,7 +106,7 @@ La navegación al perfil y la tienda se realiza mediante `Navbar`. Las secciones
 |---|---|---|
 | `App` | `src/App.tsx` | Declara rutas, `Navbar` y `Footer`. |
 | `AppProvider` | `src/context/AppProvider.tsx` | Estado, sesión, permisos de operaciones y persistencia. Envuelve `App` dentro de `BrowserRouter` en `main.tsx`. |
-| `Login` | `src/pages/Login.tsx` | Credenciales y selección de rol para la sesión de demostración. |
+| `Login` | `src/pages/Login.tsx` | Comprueba credenciales y redirige según el rol del perfil. |
 | `Registro`, `UserForm` | `src/pages/Registro.tsx` | Registro público como cliente y formulario reutilizado para crear o modificar usuarios. |
 | `Perfil` | `src/pages/Perfil.tsx` | Datos del usuario y acceso a Administrar según rol. |
 | `Administrar`, `Vendedor` | `src/pages/Administrar.tsx` | Entradas de cada panel; renderizan `Access`. |
@@ -144,3 +146,9 @@ node --experimental-strip-types node_modules/vite/bin/vite.js build --configLoad
 ```
 
 La versión instalada de React Router declara Node >=22.22.0. Se recomienda usar una versión de Node compatible al ejecutar el proyecto fuera de este entorno.
+
+## Stock y cuenta inicial
+
+El carrito no reserva ni descuenta unidades. Al confirmar la compra, `checkout` verifica el carrito persistido, los precios y todas las cantidades contra el inventario actual antes de guardar el descuento y vaciar el carrito. Los productos agotados muestran “Producto sin stock” y no se pueden agregar. Administrador y vendedor pueden aumentar o reducir el stock desde PRODUCTOS → Guardar stock, incluso dejarlo en cero. Los productos nuevos requieren al menos una unidad.
+
+`src/data/defaultAdmin.ts` define la cuenta inicial `admin@duoc.cl`, con el perfil solicitado y la contraseña inicial configurada en ese archivo. Se inicializa una sola vez por navegador mediante `clinica-nutridifs-admin-seeded-v1`; después se conservan sus cambios. La inicialización sustituye una cuenta previa con ese mismo correo y conserva las demás cuentas. Los perfiles existentes conservan sus roles; el registro público siempre crea clientes.

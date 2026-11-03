@@ -53,9 +53,10 @@ export type AppState = {
   changeQuantity: (code: string, amount: number) => void;
   removeFromCart: (code: string) => void;
   clearCart: () => void;
+  checkout: (expectedCart: CartItem[]) => void;
   profiles: Profile[];
   register: (profile: Profile) => void;
-  authenticate: (email: string, password: string, role: Role) => void;
+  authenticate: (email: string, password: string) => Role;
   updateProfile: (details: ProfileDetails) => void;
   manageUser: (profile: Profile, originalEmail?: string) => void;
   deleteUser: (email: string) => void;

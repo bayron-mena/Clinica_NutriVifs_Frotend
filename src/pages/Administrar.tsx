@@ -295,6 +295,7 @@ function Management({ seller }: { seller: boolean }) {
                     <strong>{formatCurrency(product.price)}</strong>
                     <p>Distribuidora: {product.distributor}</p>
                     <p>Stock: {product.stock} unidades</p>
+                    <p className={product.stock > 0 ? "stock-available" : "stock-message"}>Estado: {product.stock > 0 ? "Disponible" : "Sin stock"}</p>
                   </div>
                   <div className="management-actions">
                     <StockForm
@@ -474,7 +475,7 @@ function ProductForm({
       name: "",
       price: 0,
       distributor: "",
-      stock: 0,
+      stock: 1,
       category: categories[0] || "",
       image: "",
       principio: "",
@@ -483,7 +484,7 @@ function ProductForm({
     },
   );
   const [price, setPrice] = useState(initial ? String(initial.price) : "");
-  const [stock, setStock] = useState(String(initial?.stock || 0));
+  const [stock, setStock] = useState(String(initial?.stock ?? 1));
   const [error, setError] = useState("");
   const update = (key: keyof ProductoCatalogo, value: string) =>
     setProduct((p) => ({ ...p, [key]: value }));
@@ -547,11 +548,11 @@ function ProductForm({
         ))}
       </select>
       {!categories.length && <p>Primero agrega una categoría en CATEGORIAS.</p>}
-      <label htmlFor="product-stock">Stock inicial</label>
+      <label htmlFor="product-stock">{initial ? "Stock" : "Stock inicial"}</label>
       <input className="form-control"
         id="product-stock"
         type="number"
-        min="0"
+        min={initial ? 0 : 1}
         step="1"
         required
         value={stock}

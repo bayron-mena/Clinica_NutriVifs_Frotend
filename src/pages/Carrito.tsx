@@ -8,7 +8,7 @@ type Notice = { message: string; onConfirm?: () => void } | null;
 
 export default function Carrito() {
   usePage("Carrito | Clínica NutriDifs", "cart-page-body");
-  const { cart, cartTotal, changeQuantity, removeFromCart, clearCart } = useApp();
+  const { cart, cartTotal, changeQuantity, removeFromCart, clearCart, checkout, getStock } = useApp();
   const [notice, setNotice] = useState<Notice>(null);
 
   const pay = () => {
@@ -19,8 +19,12 @@ export default function Carrito() {
     setNotice({
       message: `El total de tu compra es ${formatCurrency(cartTotal)}. ¿Deseas continuar con el pago?`,
       onConfirm: () => {
-        clearCart();
-        setNotice({ message: "Pago iniciado correctamente. ¡Gracias por tu compra!" });
+        try {
+          checkout(cart);
+          setNotice({ message: "Compra confirmada. Stock actualizado. ¡Gracias por tu compra!" });
+        } catch (error) {
+          setNotice({ message: (error as Error).message });
+        }
       },
     });
   };
@@ -61,6 +65,7 @@ export default function Carrito() {
                       <button className="btn"
                         type="button"
                         aria-label="Aumentar cantidad"
+                        disabled={product.quantity >= getStock(product.code)}
                         onClick={() => changeQuantity(product.code, 1)}
                       >
                         +

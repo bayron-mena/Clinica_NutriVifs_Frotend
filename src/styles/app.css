@@ -3797,3 +3797,7 @@ body.detail-is-open {
   justify-content: center;
   gap: 0.75rem;
 }
+
+.product-content .stock-message, .detail-content .stock-message, .management .stock-message { color: #a22c35; font-weight: 700; margin-top: .5rem; }
+.stock-available { color: #176b58; font-weight: 600; }
+.add-cart-button:disabled { opacity: .55; cursor: not-allowed; }

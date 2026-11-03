@@ -81,6 +81,7 @@ export const ProductDetail = ({ product, onClose }: Props) => {
               >
                 Agregar al carrito
               </button>
+              {outOfStock && <p className="stock-message" role="status">Producto sin stock</p>}
             </>
           ) : null}
         </div>

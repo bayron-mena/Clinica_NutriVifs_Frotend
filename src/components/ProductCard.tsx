@@ -28,6 +28,7 @@ export const ProductCard = ({ product, hidden, onViewDetail }: Props) => {
   const { addToCart, getQuantity } = useApp();
   const [added, setAdded] = useState(false);
   const quantity = getQuantity(product.id);
+  const outOfStock = product.stock <= 0;
   const atStockLimit = quantity >= product.stock;
 
   useEffect(() => {
@@ -74,13 +75,14 @@ export const ProductCard = ({ product, hidden, onViewDetail }: Props) => {
           <button
             type="button"
             className="btn add-cart-button"
-            disabled={atStockLimit}
+            disabled={outOfStock || atStockLimit}
             onClick={() => {
               if (addToCart(product.id)) setAdded(true);
             }}
           >
-            {added ? "Agregado" : "Agregar al carrito"}
+            {added && !outOfStock ? "Agregado" : "Agregar al carrito"}
           </button>
+          {outOfStock && <p className="stock-message" role="status">Producto sin stock</p>}
         </div>
       </div>
     </article>
