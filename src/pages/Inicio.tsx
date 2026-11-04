@@ -6,9 +6,17 @@ import { formatCurrency, getInitials } from "../utils/format";
 
 const BENEFICIOS = [
   { icon: "🐾", title: "Atención profesional", text: "Cuidamos a tu mascota" },
-  { icon: "🛡️", title: "Equipamiento moderno", text: "Atención segura y confiable" },
+  {
+    icon: "🛡️",
+    title: "Equipamiento moderno",
+    text: "Atención segura y confiable",
+  },
   { icon: "💚", title: "Amor y respeto", text: "Por todos los animales" },
-  { icon: "⏰", title: "Atención responsable", text: "Pensando siempre en ellos" },
+  {
+    icon: "⏰",
+    title: "Atención responsable",
+    text: "Pensando siempre en ellos",
+  },
 ];
 
 const ATENCION_DOMICILIO = [
