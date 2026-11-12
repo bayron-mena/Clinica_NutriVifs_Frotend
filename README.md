@@ -1,75 +1,154 @@
-# React + TypeScript + Vite
+# Clínica NutriDifs (React)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Sitio de la clínica veterinaria migrado a **React + TypeScript + Vite**, con
+rutas de **React Router**.
 
-Currently, two official plugins are available:
+## Cómo ejecutarlo
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Requiere Node.js 20 o superior.
 
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
+```bash
+npm install
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
+Luego abre http://localhost:5173.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+| Comando           | Qué hace                                   |
+| ----------------- | ------------------------------------------ |
+| `npm run dev`     | Servidor de desarrollo con recarga en vivo |
+| `npm run build`   | Revisa tipos y genera la versión final en `dist/` |
+| `npm run preview` | Sirve la versión de `dist/`                |
+| `npm run lint`    | Revisa el código con ESLint                |
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## Estructura
 
 ```
+public/img/            Imágenes del sitio (se usan como /img/archivo.jpg)
+src/
+  main.tsx             Punto de entrada (router + estado global)
+  App.tsx              Rutas y layout (menú, pie de página)
+  components/          Navbar, Footer, ProductCard, ProductDetail, CampoError
+  context/             Estado global: carrito, sesión, perfiles y catálogo
+  data/                Productos, servicios, regiones/comunas y equipo
+  hooks/usePage.ts     Título de la pestaña y clase del <body> por página
+  pages/               Una página por ruta (Inicio, Productos, Carrito, ...)
+  utils/               Validaciones, formato de moneda y localStorage
+  styles/app.css       Estilos del sitio
+version-anterior/      Sitio original en HTML/CSS/JS (solo como referencia)
+```
+
+## Rutas
+
+| Ruta             | Página                                   |
+| ---------------- | ---------------------------------------- |
+| `/`              | Inicio                                   |
+| `/consultas`     | Servicios veterinarios                   |
+| `/agendar`       | Formulario para agendar (`?consulta=...`) |
+| `/productos`     | Catálogo con filtros, stock y detalle    |
+| `/carrito`       | Carrito y pago                           |
+| `/blog`          | Blog                                     |
+| `/contactanos`   | Formulario de contacto y mapa            |
+| `/quienes-somos` | Quiénes somos                            |
+| `/login`         | Iniciar sesión                           |
+| `/registro`      | Crear cuenta                             |
+| `/perfil`        | Datos del usuario y cerrar sesión        |
+
+Los datos (carrito, cuentas, sesión, stock y equipo) se guardan en
+`localStorage` con las mismas claves que usaba el sitio anterior.
+
+
+## Roles y administración
+
+El registro público crea clientes. El inicio de sesión comprueba la cuenta y su contraseña y toma el rol guardado en el perfil; no permite elegirlo. Administrador entra a /administrar, vendedor a /vendedor y cliente a /. Al restaurar una sesión también se consulta el rol del perfil.
+
+- Administrador: Perfil → Administrar. Crear, consultar, modificar y eliminar usuarios, productos y categorías; asignar roles y desbloquear cuentas.
+- Vendedor: Perfil → Administrar. Consultar todo el catálogo compartido, agregar y modificar productos, y actualizar el stock. No puede crear clientes, eliminar productos ni gestionar categorías. No hay asignación de productos a vendedores en el modelo actual.
+- Cliente: navegación, carrito y funciones comerciales. Los tres roles pueden navegar y comprar.
+
+Los formularios de usuarios comparten las validaciones del registro existente. Productos: nombre y distribuidora de al menos tres caracteres alfanuméricos, sin símbolos; precio entero CLP de al menos tres dígitos; stock entero positivo al crear y no negativo al editar. Categorías: mínimo tres letras, espacios permitidos, conversión a mayúsculas y sin duplicados. Eliminar una categoría conserva sus productos sin categoría. La distribuidora no se presenta en el catálogo comercial.
+
+Los datos se guardan en localStorage del navegador. No hay backend: las contraseñas y la autorización locales son exclusivamente para demostración, no para producción. Un despliegue real requiere autenticación, autorización e inventario transaccional en servidor, además de contraseñas protegidas.
+
+Validación: `npm run build`, `npm run lint`, `npm run test:roles`. En entornos Windows restringidos que bloqueen la carga de configuración de Vite, se puede usar `node --experimental-strip-types node_modules/vite/bin/vite.js build --configLoader native` después de comprobar TypeScript.
+
+
+## Mapa de navegación y componentes de roles
+
+```mermaid
+flowchart TD
+    Registro["Registro · /registro"] --> PublicForm["UserForm · registro público"]
+    PublicForm --> Inicio["Inicio · /"]
+    Login["Login · /login · credenciales"] -->|Cliente| Inicio
+    Login -->|Administrador| Administrar
+    Login -->|Vendedor| Vendedor
+    Inicio --> Perfil["Perfil · /perfil"]
+    Perfil -->|Administrador| Administrar["Administrar · /administrar"]
+    Perfil -->|Vendedor| Vendedor["Vendedor · /vendedor"]
+    Administrar --> Access["Access · comprueba el rol"]
+    Vendedor --> Access
+    Access --> Management["Management · panel y menú lateral"]
+    Management -->|USUARIOS: administrador| Users["Lista de usuarios"]
+    Users --> UserForm["UserForm · crear o modificar"]
+    Management -->|PRODUCTOS| Products["Lista administrativa · ProductDescription"]
+    Products -->|Administrador y vendedor| ProductForm["ProductForm · crear o modificar"]
+    Products -->|Administrador y vendedor| StockForm["StockForm · actualizar stock"]
+    Management -->|CATEGORIAS: administrador| Categories["Lista y formulario de categorías"]
+    Inicio -->|Todos los roles| Shop["Productos · /productos"]
+    Shop --> ProductCard["ProductCard"]
+    Shop --> ProductDetail["ProductDetail"]
+    Shop --> Carrito["Carrito · /carrito"]
+```
+
+La navegación al perfil y la tienda se realiza mediante `Navbar`. Las secciones administrativas y sus formularios cambian dentro del panel, sin nuevas rutas.
+
+| Componente | Archivo | Responsabilidad |
+|---|---|---|
+| `App` | `src/App.tsx` | Declara rutas, `Navbar` y `Footer`. |
+| `AppProvider` | `src/context/AppProvider.tsx` | Estado, sesión, permisos de operaciones y persistencia. Envuelve `App` dentro de `BrowserRouter` en `main.tsx`. |
+| `Login` | `src/pages/Login.tsx` | Comprueba credenciales y redirige según el rol del perfil. |
+| `Registro`, `UserForm` | `src/pages/Registro.tsx` | Registro público como cliente y formulario reutilizado para crear o modificar usuarios. |
+| `Perfil` | `src/pages/Perfil.tsx` | Datos del usuario y acceso a Administrar según rol. |
+| `Administrar`, `Vendedor` | `src/pages/Administrar.tsx` | Entradas de cada panel; renderizan `Access`. |
+| `Access` | `src/pages/Administrar.tsx` | Redirige invitados al login, clientes al perfil y cada rol a su panel. |
+| `Management` | `src/pages/Administrar.tsx` | Menú lateral, listas, formularios y confirmaciones de eliminación. |
+| `ProductForm` | `src/pages/Administrar.tsx` | Alta y edición de productos para administrador y vendedor. |
+| `StockForm` | `src/pages/Administrar.tsx` | Actualización de stock para administrador y vendedor. |
+| `ProductDescription` | `src/components/ProductCard.tsx` | Descripción compartida entre tienda y administración. |
+| `Productos` | `src/pages/Productos.tsx` | Catálogo y filtros conectados a las categorías administradas. |
+
+Las listas de usuarios, productos y categorías son secciones JSX de `Management`, no componentes independientes. El formulario de categorías también está dentro de `Management`. La tarjeta administrativa de productos reutiliza `ProductDescription`, no `ProductCard`. `AppContext` y `useApp` dan acceso al estado. `administracion.ts` y `registro.ts` contienen validaciones, no componentes visuales.
+
+El perfil muestra Administrar y Cerrar sesión dentro de la tarjeta azul marino, en ese orden. El catálogo y la administración permiten buscar por nombre, sin distinguir mayúsculas ni tildes; en el catálogo la búsqueda se combina con categoría y precio.
+
+
+## Medidas responsive
+
+En `src/styles/app.css`, `.products-grid` conserva 4 columnas sobre 1100px, 3 hasta 1100px, 2 hasta 800px y 1 hasta 600px. Son productos por fila, no un límite de productos.
+
+Los bloques finales de 600px y 360px ajustan registro y carrito para celulares, incluido 320px. Hasta 360px el carrito coloca la imagen encima de los datos. El botón de contacto no tiene márgenes laterales para evitar que su ancho del 100% sobresalga. Los contenedores y campos pueden encogerse sin recortar contenido.
+
+Perfil/carrito mantienen su cambio de distribución a 820px. Administración conserva sus reglas en `src/styles/administrar.css` a 1000px y 700px.
+
+El menú principal pasa a una segunda fila hasta 1000px para evitar desbordes en tablets intermedias (por ejemplo, 820px).
+
+## Bootstrap
+
+Bootstrap 5.3.8 está instalado por npm y se carga desde `src/styles/bootstrap.css`, importado en `src/main.tsx`. El CSS se incluye en una capa `bootstrap` para que los estilos propios de la clínica tengan prioridad. Los formularios usan `form-control`, `form-select`, `form-check-input` e `is-invalid`; los botones usan `btn` y las tarjetas de perfil, resumen y administración usan `card`. La lógica de interacción sigue en React, sin cargar los plugins JavaScript de Bootstrap.
+
+Las pruebas `npm run test:roles` incluyen renderizado de las 11 páginas públicas con invitado y los tres roles, y comprobación de acceso a los dos paneles administrativos.
+
+En entornos Windows restringidos, si `npm run build` falla con `spawn EPERM` al cargar la configuración, se puede verificar la compilación con:
+
+```powershell
+node node_modules/typescript/bin/tsc -b
+node --experimental-strip-types node_modules/vite/bin/vite.js build --configLoader native
+```
+
+La versión instalada de React Router declara Node >=22.22.0. Se recomienda usar una versión de Node compatible al ejecutar el proyecto fuera de este entorno.
+
+## Stock y cuenta inicial
+
+El carrito no reserva ni descuenta unidades. Al confirmar la compra, `checkout` verifica el carrito persistido, los precios y todas las cantidades contra el inventario actual antes de guardar el descuento y vaciar el carrito. Los productos agotados muestran “Producto sin stock” y no se pueden agregar. Administrador y vendedor pueden aumentar o reducir el stock desde PRODUCTOS → Guardar stock, incluso dejarlo en cero. Los productos nuevos requieren al menos una unidad.
+
+`src/data/defaultAdmin.ts` define la cuenta inicial `admin@duoc.cl`, con el perfil solicitado y la contraseña inicial configurada en ese archivo. Se inicializa una sola vez por navegador mediante `clinica-nutridifs-admin-seeded-v1`; después se conservan sus cambios. La inicialización sustituye una cuenta previa con ese mismo correo y conserva las demás cuentas. Los perfiles existentes conservan sus roles; el registro público siempre crea clientes.

@@ -1,70 +1,64 @@
-import { useEffect, useState } from "react";
-import { obtenerPacientes } from "../services/pacienteService";
-import type { Paciente } from "../types/paciente";
+import { CATEGORIAS_SERVICIOS, type Servicio } from "../data/servicios";
+import { usePage } from "../hooks/usePage";
+
+// Igual que antes: "Agendar" abre el formulario en una pestaña nueva con el
+// servicio en ?consulta= para preseleccionar el tipo de consulta.
+const urlAgendar = (servicio: Servicio) =>
+  `/agendar?consulta=${encodeURIComponent(servicio.consulta)}`;
 
 export default function Consultas() {
-  const [pacientes, setPacientes] = useState<Paciente[]>([]);
-  const [cargando, setCargando] = useState(true);
-
-  useEffect(() => {
-    async function cargarPacientes() {
-      try {
-        const datos = await obtenerPacientes();
-        setPacientes(datos);
-      } catch (error) {
-        console.error("Error al cargar pacientes:", error);
-      } finally {
-        setCargando(false);
-      }
-    }
-
-    cargarPacientes();
-  }, []);
+  usePage("Clínica NutriDifs| Consultas");
 
   return (
-    <div className="container py-4">
-      <h1 className="h3 mb-4">Pacientes</h1>
+    <main>
+      <section className="services-section container" aria-labelledby="consultas-title">
+        <h1 id="consultas-title" className="titulo-consultas">
+          Nuestras Consultas
+        </h1>
+        <p className="consultas-descripcion">
+          Conoce nuestros servicios veterinarios, sus precios, duración y
+          especies atendidas.
+        </p>
 
-      {cargando ? (
-        <div
-          className="d-flex justify-content-center align-items-center gap-3 py-4"
-          role="status"
-        >
-          <div className="spinner-border text-primary" aria-hidden="true" />
-          <span>Cargando pacientes...</span>
-        </div>
-      ) : (
-        <table className="table table-striped table-hover">
-          <thead>
-            <tr>
-              <th>Nombre</th>
-              <th>Especie</th>
-              <th>Raza</th>
-              <th>Edad</th>
-              <th>Propietario</th>
-            </tr>
-          </thead>
-          <tbody>
-            {pacientes.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="text-center text-muted">
-                  No hay pacientes registrados.
-                </td>
-              </tr>
-            ) : (
-              pacientes.map((p) => (
-                <tr key={p.id}>
-                  <td>{p.nombre}</td>
-                  <td>{p.especie}</td>
-                  <td>{p.raza}</td>
-                  <td>{p.edad}</td>
-                  <td>{p.propietario}</td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      )}
-    </div>
+        {CATEGORIAS_SERVICIOS.map((categoria) => (
+          <section
+            key={categoria.id}
+            className={categoria.className}
+            aria-labelledby={categoria.id}
+          >
+            <h2 id={categoria.id}>{categoria.title}</h2>
+
+            <div className="services-grid consultas-grid">
+              {categoria.servicios.map((servicio) => (
+                <article className="service-card" key={servicio.code}>
+                  <img
+                    src={`/img/${servicio.image}`}
+                    alt={servicio.alt}
+                    className="service-image"
+                  />
+                  <span className="service-code">{servicio.code}</span>
+                  <h3>{servicio.name}</h3>
+                  <p>{servicio.description}</p>
+                  <div className="service-details">
+                    <span>{servicio.species}</span>
+                    <span>⏱️ {servicio.duration}</span>
+                    <strong>{servicio.price}</strong>
+                  </div>
+                  <p className="service-observation">{servicio.observation}</p>
+                  <a
+                    href={urlAgendar(servicio)}
+                    className="btn-agendar"
+                    target="_blank"
+                    rel="noopener"
+                  >
+                    Agendar
+                  </a>
+                </article>
+              ))}
+            </div>
+          </section>
+        ))}
+      </section>
+    </main>
   );
 }
