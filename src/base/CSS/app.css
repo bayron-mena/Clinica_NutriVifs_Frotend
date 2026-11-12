@@ -3579,4 +3579,4 @@
                         .cart-page-button.primary { border: 0; background: #176b58; color: #fff; }
                           .cart-page-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem; }
                           @media (max-width: 820px) { .profile-page-shell, .cart-page-layout, .profile-info-grid { grid-template-columns: 1fr; } .profile-page-header, .cart-page-header { align-items: flex-start; flex-direction: column; } }
-                          
+  }}
