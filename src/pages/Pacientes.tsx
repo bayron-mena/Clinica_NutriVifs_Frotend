@@ -7,7 +7,7 @@ export default function Pacientes() {
   const [pacientes, setPacientes] = useState<Paciente[]>([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+  const [busqueda, setBusqueda] = useState("");
 
   useEffect(() => {
     async function cargarPacientes() {
@@ -25,9 +25,24 @@ export default function Pacientes() {
     cargarPacientes();
   }, []);
 
+  const texto = busqueda.toLowerCase();
+  const filtrados = pacientes.filter(
+    (p) =>
+      p.nombre.toLowerCase().includes(texto) ||
+      p.especie.toLowerCase().includes(texto),
+  );
+
   return (
     <div className="container py-4">
       <h1 className="h3 mb-4">Pacientes</h1>
+
+      <input
+        type="search"
+        className="form-control mb-3"
+        placeholder="Buscar por nombre o especie..."
+        value={busqueda}
+        onChange={(e) => setBusqueda(e.target.value)}
+      />
 
       {cargando ? (
         <div
@@ -37,12 +52,12 @@ export default function Pacientes() {
           <div className="spinner-border text-primary" aria-hidden="true" />
           <span>Cargando pacientes...</span>
         </div>
-        ) : error ? (
-          <div className="alert alert-danger" role="alert">
-            {error}
-  </div>
+      ) : error ? (
+        <div className="alert alert-danger" role="alert">
+          {error}
+        </div>
       ) : (
-        <PacienteTabla pacientes={pacientes} />
+        <PacienteTabla pacientes={filtrados} />
       )}
     </div>
   );
