@@ -5,14 +5,17 @@ import type { Paciente } from "../types/paciente";
 export default function Pacientes() {
   const [pacientes, setPacientes] = useState<Paciente[]>([]);
   const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
 
   useEffect(() => {
     async function cargarPacientes() {
       try {
         const datos = await obtenerPacientes();
         setPacientes(datos);
-      } catch (error) {
-        console.error("Error al cargar pacientes:", error);
+      } catch (e) {
+        console.error("Error al cargar pacientes:", e);
+        setError("Error al cargar pacientes");
       } finally {
         setCargando(false);
       }
@@ -33,6 +36,10 @@ export default function Pacientes() {
           <div className="spinner-border text-primary" aria-hidden="true" />
           <span>Cargando pacientes...</span>
         </div>
+        ) : error ? (
+          <div className="alert alert-danger" role="alert">
+            {error}
+  </div>
       ) : (
         <table className="table table-striped table-hover">
           <thead>
